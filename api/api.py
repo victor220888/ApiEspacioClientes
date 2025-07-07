@@ -81,6 +81,7 @@ async def consultar_deuda(
         p_deud      = cur.var(cx_Oracle.CURSOR)
         p_desc_clie = cur.var(str)
         p_cant_deta = cur.var(int)
+        p_idsession = cur.var(int)
         p_codresp   = cur.var(str)
         p_descresp  = cur.var(str)
 
@@ -93,6 +94,7 @@ async def consultar_deuda(
                 usuario_web,
                 p_desc_clie,
                 p_cant_deta,
+                p_idsession,
                 p_codresp,
                 p_descresp
             ]
@@ -111,7 +113,8 @@ async def consultar_deuda(
             "desc_clie": p_desc_clie.getvalue() or "",
             "cant_deta": p_cant_deta.getvalue() or 0,
             "codresp":   p_codresp.getvalue()   or "",
-            "descresp":  p_descresp.getvalue()  or ""
+            "descresp":  p_descresp.getvalue()  or "",
+            "idsession": p_idsession.getvalue() or 0
         }
 
     except DatabaseError as err:  # type: ignore

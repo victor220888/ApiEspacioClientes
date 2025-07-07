@@ -24,5 +24,6 @@ class ConsultaDeudaResponse(BaseModel):
     cant_deta: Optional[int]    = None
     codresp:  Optional[str]     = None
     descresp: Optional[str]     = None
+    idsession: Optional[int]    = None
 
     model_config = ConfigDict(extra="ignore")
