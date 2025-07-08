@@ -1,8 +1,4 @@
 # API Pagos Web (Espacio Clientes)
-
-**Versión:** 1.0.0
-
-# API Pagos Web (Espacio Clientes)
 **Versión:** 1.0.0
 
 ## 📖 Descripción
