@@ -44,7 +44,7 @@ if settings.environment == "production":
         allowed_hosts=["frontend.tu-dominio.com", "api.tu-dominio.com"]
     )
 
-
+'''
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     # aquí deberías validar contra tu base de datos; este es un ejemplo hardcodeado:
@@ -61,6 +61,43 @@ def db_conn():
         yield conn
     finally:
         conn.close()
+'''
+
+def db_conn():
+    conn = get_connection()
+    try:
+        yield conn
+    finally:
+        conn.close()
+        
+@app.post("/token")
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    conn = Depends(db_conn)
+):
+    cur = conn.cursor()
+    try:
+        p_codresp  = cur.var(int)
+        p_descresp = cur.var(str)
+        cur.callproc(
+            "PACK_PAGO_WS.VALIDAR_USURAIO",
+            [
+                form_data.username,
+                p_codresp,
+                p_descresp
+            ]
+        )
+        codigo  = p_codresp.getvalue()
+        mensaje = p_descresp.getvalue()
+    finally:
+        cur.close()
+
+    if codigo != 0:
+        raise HTTPException(status_code=codigo, detail=mensaje)
+
+    access_token = create_access_token({"sub": form_data.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
 
 
 @app.get(
@@ -71,7 +108,7 @@ def db_conn():
     dependencies=[Depends(get_current_user)]
 )
 async def consultar_deuda(
-    nro_documento_cliente: str = Query(..., min_length=6, max_length=12),
+    nro_documento_cliente: str = Query(..., min_length=6, max_length=15),
     codigo_moneda: int        = Query(..., ge=1),
     usuario_web: str          = Query(..., min_length=3),
     conn = Depends(db_conn)
