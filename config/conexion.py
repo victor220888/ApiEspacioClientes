@@ -1,4 +1,5 @@
 import cx_Oracle # type: ignore
+from cx_Oracle import DatabaseError 
 import logging
 from .settings import settings
 
@@ -23,6 +24,9 @@ pool = cx_Oracle.SessionPool(
 def get_connection():
     try:
         return pool.acquire()
-    except cx_Oracle.Error as e:
-        logger.error("No se pudo adquirir conexión Oracle: %s", e)
-        raise
+    #except cx_Oracle.Error as e:
+    #    logger.error("No se pudo adquirir conexión Oracle: %s", e)
+    #    raise
+    except DatabaseError as err:  # Ahora DatabaseError está definido
+        logger.exception("Error BD al consultar deuda")
+        raise HTTPException(500, detail="Error de base de datos.")

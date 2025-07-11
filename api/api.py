@@ -1,17 +1,23 @@
 # APIPAGOSWEB/api/api.py
 
+import json
+import os
 from fastapi.security import OAuth2PasswordRequestForm # type: ignore
 from api.auth import create_access_token, verify_password, get_current_user, get_password_hash
 
 from fastapi import FastAPI, HTTPException, Depends, Query  # type: ignore
 
 import cx_Oracle  # type: ignore
+from cx_Oracle import DatabaseError # type: ignore
 from config.settings import settings
 from config import get_connection
 
 from api.models import DeudaItem, ConsultaDeudaResponse
 
 import logging
+from starlette.middleware.cors import CORSMiddleware # type: ignore
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware # type: ignore
+from starlette.middleware.trustedhost import TrustedHostMiddleware # type: ignore
 
 # silencia los mensajes de versionado de bcrypt
 logging.getLogger("passlib.handlers.bcrypt").setLevel(logging.ERROR)
@@ -23,9 +29,7 @@ app = FastAPI(
     openapi_tags=[{"name": "Consulta", "description": "Obtener deudas del cliente"}]
 )
 
-from starlette.middleware.cors import CORSMiddleware # type: ignore
-from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware # type: ignore
-from starlette.middleware.trustedhost import TrustedHostMiddleware # type: ignore
+#origins = json.loads(os.getenv("ALLOWED_ORIGINS", '[]'))
 
 # Habilita CORS para orígenes permitidos (local en dev)
 app.add_middleware(
@@ -35,6 +39,16 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+'''
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,        # ["*"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+'''
 
 # Forzar HTTPS y Trusted Hosts solo en producción
 if settings.environment == "production":
@@ -101,7 +115,7 @@ async def login(
 
 
 @app.get(
-    "/epacio-cliente/consultar-deuda/",
+    "/espacio-cliente/consultar-deuda/",
     response_model=ConsultaDeudaResponse,
     summary="Consulta deudas de un cliente",
     tags=["Consulta"],
@@ -162,3 +176,4 @@ async def consultar_deuda(
         raise HTTPException(500, detail="Error interno.")
     finally:
         cur.close()
+
