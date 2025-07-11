@@ -26,7 +26,9 @@ logger = logging.getLogger("uvicorn.error")
 app = FastAPI(
     title="API Pagos Web (Espacio Clientes)",
     version="1.0.0",
-    openapi_tags=[{"name": "Consulta", "description": "Obtener deudas del cliente"}]
+    openapi_tags=[{"name": "Consulta", "description": "Obtener deudas del cliente"},
+                  {"name": "Login", "description": "Autenticación vía JWT"}
+                ]
 )
 
 #origins = json.loads(os.getenv("ALLOWED_ORIGINS", '[]'))
@@ -85,7 +87,9 @@ def db_conn():
         conn.close()
 
 
-@app.post("/token")
+@app.post("/token",
+    summary="Autenticar usuario y obtener token de acceso",
+    tags=["Login"])
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     conn = Depends(db_conn)
@@ -112,7 +116,6 @@ async def login(
 
     access_token = create_access_token({"sub": form_data.username})
     return {"access_token": access_token, "token_type": "bearer"}
-
 
 
 @app.get(
