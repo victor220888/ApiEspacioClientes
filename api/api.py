@@ -83,7 +83,8 @@ def db_conn():
         yield conn
     finally:
         conn.close()
-        
+
+
 @app.post("/token")
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -115,16 +116,16 @@ async def login(
 
 
 @app.get(
-    "/espacio-cliente/consultar-deuda/",
+    "/consulta/deuda-cliente/",
     response_model=ConsultaDeudaResponse,
-    summary="Consulta deudas de un cliente",
+    summary="Retorna todas las deudas del cliente (incluye todos los servicios ya sea cuotas, jardinera, agua, impuesto, expensas, otros gastos) tanto para planes finalizados o activos",
     tags=["Consulta"],
     dependencies=[Depends(get_current_user)]
 )
 async def consultar_deuda(
-    nro_documento_cliente: str = Query(..., min_length=6, max_length=15),
-    codigo_moneda: int        = Query(..., ge=1),
-    usuario_web: str          = Query(..., min_length=3),
+    documento: str = Query(..., min_length=6, max_length=15),
+    moneda: int    = Query(..., ge=1),
+    usuario: str   = Query(..., min_length=3),
     conn = Depends(db_conn)
 ):
     try:
@@ -139,10 +140,10 @@ async def consultar_deuda(
         cur.callproc(
             "pack_pago_ws.paweb_consulta",
             [
-                nro_documento_cliente,
-                codigo_moneda,
+                documento,
+                moneda,
                 p_deud,
-                usuario_web,
+                usuario,
                 p_desc_clie,
                 p_cant_deta,
                 p_idsession,
