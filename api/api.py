@@ -2,17 +2,21 @@
 
 import json
 import os
-from fastapi.security import OAuth2PasswordRequestForm # type: ignore
-from api.auth import create_access_token, verify_password, get_current_user, get_password_hash
+from fastapi.security import OAuth2PasswordRequestForm
 
-from fastapi import FastAPI, HTTPException, Depends, Query  # type: ignore
+#rom streamlit import status # type: ignore
+from api.auth import create_access_token, verify_password, get_current_user, get_password_hash
+from fastapi import FastAPI, HTTPException, Depends, Query, status  # type: ignore
 
 import cx_Oracle  # type: ignore
 from cx_Oracle import DatabaseError # type: ignore
 from config.settings import settings
 from config import get_connection
 
-from api.models import DeudaItem, ConsultaDeudaResponse
+from api.models import DeudaItem, ConsultaDeudaResponse #Explicacion en el __init__.py del models
+
+from api.models.carrito import AgregarCarritoRequest, AgregarCarritoResponse
+
 
 import logging
 from starlette.middleware.cors import CORSMiddleware # type: ignore
@@ -27,7 +31,8 @@ app = FastAPI(
     title="API Pagos Web (Espacio Clientes)",
     version="1.0.0",
     openapi_tags=[{"name": "Consulta", "description": "Obtener deudas del cliente"},
-                  {"name": "Login", "description": "Autenticación vía JWT"}
+                  {"name": "Login", "description": "Autenticación vía JWT"},
+                  {"name": "Carrito", "description": "Agrega los servicios seleccionados desde la Web al carrito"},
                 ]
 )
 
@@ -181,3 +186,62 @@ async def consultar_deuda(
     finally:
         cur.close()
 
+
+@app.post(
+    "/carrito/agregar",
+    response_model=AgregarCarritoResponse,
+    summary="Agrega un movimiento al carrito",
+    tags=["Carrito"],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)]
+)
+async def agregar_al_carrito(
+    idsession: str = Query(..., min_length=1, max_length=9),
+    indicador: str    = Query(..., min_length=1, max_length=1),
+    codmovimiento: str    = Query(..., min_length=1, max_length=20),
+    usuario: str   = Query(..., max_length=35),
+    conn = Depends(db_conn)
+):
+    """
+    Pudes usar este endpoint para sumar o restar un item al carrito.
+    Los parametros `idsession`, y `codmovimiento` deben ser los dats que retornaron en la consulta de deuda.
+    El `indicador` puede ser `S` para agregar o `N` para eliminar un item del carrito.
+    """
+    cur = conn.cursor()
+    try:
+        # Variables de salida
+        p_comision = cur.var(float)
+        p_codresp  = cur.var(str)
+        p_descreps = cur.var(str)
+
+        # Llamada al paquete Oracle
+        cur.callproc(
+            "PACK_PAGO_WS.AGREGAR_AL_CARRITO",
+            [
+                idsession,
+                indicador,
+                codmovimiento,
+                usuario,
+                p_comision,
+                p_codresp,
+                p_descreps
+            ]
+        )
+        # Si la operación modifica datos, confirma la transacción
+        conn.commit()
+
+        # Construye la respuesta
+        return AgregarCarritoResponse(
+            comision   = p_comision.getvalue(),
+            codresp    = p_codresp.getvalue(),
+            descreps   = p_descreps.getvalue()
+        )
+    except cx_Oracle.DatabaseError as err:
+        logger.exception("Error BD al agregar al carrito")
+        # Extrae código y mensaje si tu paquete los devuelve en excepciones
+        raise HTTPException(
+            status_code=500,
+            detail="Error de base de datos al agregar al carrito."
+        )
+    finally:
+        cur.close()
