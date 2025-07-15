@@ -5,7 +5,6 @@ import os
 from fastapi.security import OAuth2PasswordRequestForm
 
 #rom streamlit import status # type: ignore
-from api.auth import create_access_token, verify_password, get_current_user, get_password_hash
 from fastapi import FastAPI, HTTPException, Depends, Query, status  # type: ignore
 
 import cx_Oracle  # type: ignore
@@ -14,8 +13,8 @@ from config.settings import settings
 from config import get_connection
 
 from api.models import DeudaItem, ConsultaDeudaResponse #Explicacion en el __init__.py del models
-
 from api.models.carrito import AgregarCarritoRequest, AgregarCarritoResponse
+from api.auth import create_access_token, verify_password, get_current_user, get_password_hash
 
 
 import logging
@@ -30,8 +29,9 @@ logger = logging.getLogger("uvicorn.error")
 app = FastAPI(
     title="API Pagos Web (Espacio Clientes)",
     version="1.0.0",
-    openapi_tags=[{"name": "Consulta", "description": "Obtener deudas del cliente"},
+    openapi_tags=[
                   {"name": "Login", "description": "Autenticación vía JWT"},
+                  {"name": "Consulta", "description": "Obtener deudas del cliente"},
                   {"name": "Carrito", "description": "Agrega los servicios seleccionados desde la Web al carrito"},
                 ]
 )
@@ -205,7 +205,7 @@ async def agregar_al_carrito(
 ):
     """
     Pudes usar este endpoint para sumar o restar un item al carrito.
-    Los parametros `idsession`, y `codmovimiento` deben ser los dats que retornaron en la consulta de deuda.
+    Los parametros `idsession`, y `codmovimiento` deben ser los datos que retornaron en la consulta de deuda.
     El `indicador` puede ser `S` para agregar o `N` para eliminar un item del carrito.
     """
     cur = conn.cursor()
