@@ -223,7 +223,7 @@ ApiPagosWEB/
 │   └── settings.py        # Carga y validación de variables de entorno
 ├── requirements.txt       # Lista de dependencias del proyecto
 ├── test_db.py             # Script para probar la conexión a la base de datos
-├── .env.example           # Plantilla para las variables de entorno
+├── .env                   # Plantilla para las variables de entorno
 └── .gitignore             # Archivos y carpetas a ignorar por Git
 ```
 
