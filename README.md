@@ -106,6 +106,25 @@ Este proyecto es una API RESTful construida con **FastAPI** y diseñada para ges
     }
     ```
 
+#### `POST /pago`
+> Procesa un pago de las deudas agregadas al carrito. Requiere autenticación.
+
+*   **Headers:**
+
+    *   `Authorization`: `Bearer <access_token>`
+
+*   **Query Params:**
+*   `session` (integer) — Identificador de la sesión de pago.
+*   `user` (string) — Nombre de usuario que realiza el pago.
+*   `cod_transaccion` (string) — Código único de la transacción de pago.
+*   **Response** (`200 OK`):
+    ```json
+    {
+      "cod_resp": "0",
+      "mod_fact": "FACT_MOD_01",
+      "desc_resp": "Pago procesado correctamente"
+    }
+    ```
 ---
 
 ## 🛠️ Tecnologías Utilizadas

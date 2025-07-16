@@ -237,7 +237,7 @@ async def agregar_al_carrito(
     dependencies=[Depends(get_current_user)]
 )
 async def confirmar_pago(
-    session:         str = Query(..., description="En la respuesta de la consulta puedes obtener el ID de sesión único.", min_length=1, max_length=9),
+    session:         int = Query(..., description="En la respuesta de la consulta puedes obtener el ID de sesión único."),
     user:            str = Query(..., description="Usuario medio alternativo." , max_length=35),
     cod_transaccion: str = Query(..., description="Código de la transacción a procesar (emite la entidad bancaria)."   , max_length=20),
     conn = Depends(db_conn)
@@ -256,58 +256,42 @@ async def confirmar_pago(
 
     # 2. Definimos una función síncrona anidada para la lógica de BD.
     #    Esto nos permite pasarla a run_in_threadpool y no bloquear FastAPI.
-    def db_call(connection):
-        try:
-            cursor = conn.cursor()
+    cursor = conn.cursor()
+    try:
 
-            # Declarar variables para los parámetros de SALIDA
-            o_codresp = cursor.var(str)
-            o_mod_fact = cursor.var(int)
-            o_descresp = cursor.var(str)
+        # Declarar variables para los parámetros de SALIDA
+        o_codresp = cursor.var(str)
+        o_mod_fact = cursor.var(str)
+        o_descresp = cursor.var(str)
 
-            # Llamar al procedimiento almacenado
-            cursor.callproc(
-                "pack_pago_ws.paweb_pago",
-                [
-                    session,         # i_session
-                    user,            # i_user
-                    cod_transaccion, # i_codtransaccion
-                    o_codresp,       # o_codresp
-                    o_mod_fact,      # o_mod_fact
-                    o_descresp       # o_descresp
-                ]
-            )
-            
-            # Obtener los valores de salida
-            result = {
-                "cod_resp": o_codresp.getvalue(),
-                "mod_fact": o_mod_fact.getvalue(),
-                "desc_resp": o_descresp.getvalue()
-            }
-            cursor.close()
-            return result
-
-        except cx_Oracle.DatabaseError as err:
-            print(f"Error en la base de datos al procesar el pago: {err}")
-            return None
-
-    # 3. Ejecutamos la función de BD en un hilo separado
-    result_dict = await run_in_threadpool(db_call, db_conn)
-
-    # 4. Manejamos los resultados
-    if result_dict is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ocurrió un error en el servidor al procesar el pago."
+        # Llamar al procedimiento almacenado
+        cursor.callproc(
+            "pack_pago_ws.paweb_pago",
+            [
+                session,         # i_session
+                user,            # i_user
+                cod_transaccion, # i_codtransaccion
+                o_codresp,       # o_codresp
+                o_mod_fact,      # o_mod_fact
+                o_descresp       # o_descresp
+            ]
         )
-
-    # Si el código de respuesta del procedimiento indica un error de negocio
-    if result_dict.get("cod_resp") != "0":
+        
+        # Obtener los valores de salida
+        
+        result = {
+            "cod_resp": o_codresp.getvalue() or "",
+            "mod_fact": o_mod_fact.getvalue() or "",
+            "desc_resp": o_descresp.getvalue() or ""
+        }
+        conn.commit()
+        return result
+    except cx_Oracle.DatabaseError as err:
+        logger.exception("Error BD al Procesar el pago")
+        # Extrae código y mensaje si tu paquete los devuelve en excepciones
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error en el pago: {result_dict.get('desc_resp')}"
+            status_code=500,
+            detail="Error de base de datos al Procesar el pago."
         )
-    
-    # Si todo salió bien, devolvemos el resultado.
-    # FastAPI lo validará contra el modelo PagoResponse.
-    return result_dict
+    finally:
+        cursor.close()
