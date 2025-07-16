@@ -1,7 +1,4 @@
-# APIPAGOSWEB/api/api.py
-
-import json
-import os
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import OAuth2PasswordRequestForm
 
 #rom streamlit import status # type: ignore
@@ -12,9 +9,11 @@ from cx_Oracle import DatabaseError # type: ignore
 from config.settings import settings
 from config import get_connection
 
-from api.models import DeudaItem, ConsultaDeudaResponse #Explicacion en el __init__.py del models
-from api.models.carrito import AgregarCarritoRequest, AgregarCarritoResponse
-from api.auth import create_access_token, verify_password, get_current_user, get_password_hash
+from api.models import ConsultaDeudaResponse #Explicacion en el __init__.py del models
+from api.models.carrito import AgregarCarritoResponse
+from api.models.pago   import PagoResponse
+
+from api.auth import create_access_token, get_current_user
 
 
 import logging
@@ -35,8 +34,6 @@ app = FastAPI(
                   {"name": "Carrito", "description": "Agrega los servicios seleccionados desde la Web al carrito"},
                 ]
 )
-
-#origins = json.loads(os.getenv("ALLOWED_ORIGINS", '[]'))
 
 
 # Habilita CORS para orígenes permitidos (local en dev)
@@ -66,24 +63,6 @@ if settings.environment == "production":
         allowed_hosts=["frontend.tu-dominio.com", "api.tu-dominio.com"]
     )
 
-'''
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # aquí deberías validar contra tu base de datos; este es un ejemplo hardcodeado:
-    fake_user = {"username": "aqpa", "hashed_password": get_password_hash("123456")}
-    if form_data.username != fake_user["username"] or not verify_password(form_data.password, fake_user["hashed_password"]):
-        raise HTTPException(400, "Usuario o contraseña incorrectos")
-    access_token = create_access_token({"sub": form_data.username})
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-def db_conn():
-    conn = get_connection()
-    try:
-        yield conn
-    finally:
-        conn.close()
-'''
 
 def db_conn():
     conn = get_connection()
@@ -197,10 +176,10 @@ async def consultar_deuda(
     dependencies=[Depends(get_current_user)]
 )
 async def agregar_al_carrito(
-    idsession: str = Query(..., min_length=1, max_length=9),
-    indicador: str    = Query(..., min_length=1, max_length=1),
-    codmovimiento: str    = Query(..., min_length=1, max_length=20),
-    usuario: str   = Query(..., max_length=35),
+    idsession: str     = Query(..., description="ID de sesión único para la transacción.", min_length=1, max_length=9),
+    indicador: str     = Query(..., description="El indicador determina si se agrega o quita un item del carrito. (S/N)", min_length=1, max_length=1),
+    codmovimiento: str = Query(..., description="Código de la transacción a procesar.", min_length=1, max_length=20),
+    usuario: str       = Query(..., description="Nombre de usuario que realiza la operación.", max_length=35),
     conn = Depends(db_conn)
 ):
     """
@@ -246,3 +225,89 @@ async def agregar_al_carrito(
         )
     finally:
         cur.close()
+        
+        
+
+@app.post(
+    "/pago",
+    response_model=PagoResponse,
+    summary="Procesa el pago de un o los servicio de un cliente",
+    tags=["Pago"],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_current_user)]
+)
+async def confirmar_pago(
+    session:         str = Query(..., description="En la respuesta de la consulta puedes obtener el ID de sesión único.", min_length=1, max_length=9),
+    user:            str = Query(..., description="Usuario medio alternativo." , max_length=35),
+    cod_transaccion: str = Query(..., description="Código de la transacción a procesar (emite la entidad bancaria)."   , max_length=20),
+    conn = Depends(db_conn)
+):
+    """
+    Este endpoint procesa un pago utilizando los datos proporcionados.
+    Llama al procedimiento almacenado 'pack_pago_ws.paweb_pago'.
+    
+    - **session**: ID de la sesión de la consulta.
+    - **user**: Usuario que realiza la operación.
+    - **cod_transaccion**: Código de la transacción a ejecutar.
+    """
+    # 1. Validamos los datos de entrada.
+    if not session or not user or not cod_transaccion:
+        raise HTTPException(status_code=400, detail="Faltan datos requeridos.")
+
+    # 2. Definimos una función síncrona anidada para la lógica de BD.
+    #    Esto nos permite pasarla a run_in_threadpool y no bloquear FastAPI.
+    def db_call(connection):
+        try:
+            cursor = conn.cursor()
+
+            # Declarar variables para los parámetros de SALIDA
+            o_codresp = cursor.var(str)
+            o_mod_fact = cursor.var(int)
+            o_descresp = cursor.var(str)
+
+            # Llamar al procedimiento almacenado
+            cursor.callproc(
+                "pack_pago_ws.paweb_pago",
+                [
+                    session,         # i_session
+                    user,            # i_user
+                    cod_transaccion, # i_codtransaccion
+                    o_codresp,       # o_codresp
+                    o_mod_fact,      # o_mod_fact
+                    o_descresp       # o_descresp
+                ]
+            )
+            
+            # Obtener los valores de salida
+            result = {
+                "cod_resp": o_codresp.getvalue(),
+                "mod_fact": o_mod_fact.getvalue(),
+                "desc_resp": o_descresp.getvalue()
+            }
+            cursor.close()
+            return result
+
+        except cx_Oracle.DatabaseError as err:
+            print(f"Error en la base de datos al procesar el pago: {err}")
+            return None
+
+    # 3. Ejecutamos la función de BD en un hilo separado
+    result_dict = await run_in_threadpool(db_call, db_conn)
+
+    # 4. Manejamos los resultados
+    if result_dict is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ocurrió un error en el servidor al procesar el pago."
+        )
+
+    # Si el código de respuesta del procedimiento indica un error de negocio
+    if result_dict.get("cod_resp") != "0":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error en el pago: {result_dict.get('desc_resp')}"
+        )
+    
+    # Si todo salió bien, devolvemos el resultado.
+    # FastAPI lo validará contra el modelo PagoResponse.
+    return result_dict

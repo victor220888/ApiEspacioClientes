@@ -1,4 +1,4 @@
-# api/models.py
+# api/models/carrito.py
 
 from pydantic import BaseModel
 from typing import Optional

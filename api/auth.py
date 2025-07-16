@@ -15,17 +15,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Esquema OAuth2 para extraer el token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+'''
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verifica que la contraseña en texto plano coincida con el hash almacenado.
     """
     return pwd_context.verify(plain_password, hashed_password)
 
+
+
 def get_password_hash(password: str) -> str:
     """
     Hashea la contraseña para almacenamiento seguro.
     """
     return pwd_context.hash(password)
+'''
+
+
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
@@ -47,6 +53,8 @@ def create_access_token(data: dict) -> str:
         algorithm=settings.algorithm
     )
     return encoded_jwt
+
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     credentials_exc = HTTPException(
