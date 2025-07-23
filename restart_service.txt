@@ -1,0 +1,19 @@
+Windows PowerShell
+Copyright (C) 2016 Microsoft Corporation. Todos los derechos reservados.
+
+PS C:\Users\Administrador.ML30-SVR> schtasks /End /TN "ApiEspacioClientes"
+CORRECTO: la tarea programada "ApiEspacioClientes" ha finalizado correctamente.
+PS C:\Users\Administrador.ML30-SVR> netstat -ano | findstr :8000
+  TCP    0.0.0.0:8000           0.0.0.0:0              LISTENING       66536
+  TCP    192.168.13.202:8000    192.168.3.38:50876     TIME_WAIT       0
+  TCP    192.168.13.202:8000    192.168.3.38:50896     ESTABLISHED     66536
+PS C:\Users\Administrador.ML30-SVR> netstat -ano | findstr :8000
+  TCP    0.0.0.0:8000           0.0.0.0:0              LISTENING       66536
+  TCP    192.168.13.202:8000    192.168.3.38:50876     TIME_WAIT       0
+  TCP    192.168.13.202:8000    192.168.3.38:50896     TIME_WAIT       0
+  TCP    192.168.13.202:8000    192.168.3.38:50899     FIN_WAIT_2      66536
+PS C:\Users\Administrador.ML30-SVR> taskkill /PID 66536 /F
+Correcto: se terminó el proceso con PID 66536.
+PS C:\Users\Administrador.ML30-SVR> schtasks /Run /TN "ApiEspacioClientes"
+CORRECTO: se ha intentado ejecutar la tarea programada "ApiEspacioClientes".
+PS C:\Users\Administrador.ML30-SVR>

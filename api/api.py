@@ -12,6 +12,7 @@ from config import get_connection
 from api.models import ConsultaDeudaResponse #Explicacion en el __init__.py del models
 from api.models.carrito import AgregarCarritoResponse
 from api.models.pago   import PagoResponse
+from api.models.anulacion import AnulacionResponse
 
 from api.auth import create_access_token, get_current_user
 
@@ -178,7 +179,7 @@ async def consultar_deuda(
 async def agregar_al_carrito(
     idsession: str     = Query(..., description="ID de sesión único para la transacción.", min_length=1, max_length=9),
     indicador: str     = Query(..., description="El indicador determina si se agrega o quita un item del carrito. (S/N)", min_length=1, max_length=1),
-    codmovimiento: str = Query(..., description="Código de la transacción a procesar.", min_length=1, max_length=20),
+    codmovimiento: str = Query(..., description="Código de item (codmovimiento) a procesar.", min_length=1, max_length=20),
     usuario: str       = Query(..., description="Nombre de usuario que realiza la operación.", max_length=35),
     conn = Depends(db_conn)
 ):
@@ -295,3 +296,56 @@ async def confirmar_pago(
         )
     finally:
         cursor.close()
+        
+        
+@app.post(
+    "/anulacion",
+    response_model=AnulacionResponse,
+    summary="Anula un pago previamente procesado",
+    tags=["Anulacion"],
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_current_user)]
+)
+async def anular_pago(
+    cod_transaccion: str = Query(..., 
+                                description="Código de la transacción a anular (el mismo usado en el pago)", 
+                                min_length=2, 
+                                max_length=20),
+    conn = Depends(db_conn)
+):
+    """
+    Anula un pago utilizando el código de transacción devuelto por el pago.
+    Llama al procedimiento almacenado 'PACK_PAGO_WS.PA_ANUL'.
+    """
+    cur = conn.cursor()
+    try:
+        # Variables de salida
+        p_codresp = cur.var(str)
+        p_descresp = cur.var(str)
+
+        # Llamada al paquete Oracle
+        cur.callproc(
+            "PACK_PAGO_WS.PA_ANUL",
+            [
+                cod_transaccion,  # P_CODTRANSACCION (entrada)
+                p_codresp,        # P_CODRESP (salida)
+                p_descresp        # P_DESCRESP (salida)
+            ]
+        )
+        
+        # Confirmar operación
+        conn.commit()
+
+        return AnulacionResponse(
+            cod_resp=p_codresp.getvalue() or "",
+            desc_resp=p_descresp.getvalue() or ""
+        )
+        
+    except cx_Oracle.DatabaseError as err:
+        logger.exception("Error BD al anular pago")
+        raise HTTPException(
+            status_code=500,
+            detail="Error de base de datos al anular el pago."
+        )
+    finally:
+        cur.close()

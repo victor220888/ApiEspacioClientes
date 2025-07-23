@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requerimientos de Sistema de Pagos - Inmobiliaria "Mi Tierra"</title>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-home"></i>
+                Mi Tierra
+            </div>
+            <h1>Requerimientos del Sistema de Pagos</h1>
+            <p>Documento técnico para el desarrollo de la plataforma de pagos web de la inmobiliaria</p>
+            <p>Ticket - 6 Multiselección de cuotas en ESPACIO DE CLIENTES.</p>
+            <div class="document-info">
+                <p><i class="fas fa-calendar"></i> Fecha: 28 de Junio de 2025</p>
+                <p><i class="fas fa-user"></i> Responsable: Área de Análisis y Desarrollo - Victor Román</p>
+            </div>
+        </header>
+        
+        <nav>
+            <ul>
+                <li><a href="#servicios"><i class="fas fa-list"></i> Servicios</a></li>
+                <li><a href="#reglas"><i class="fas fa-gavel"></i> Reglas de Pago</a></li>
+                <li><a href="#flujo"><i class="fas fa-project-diagram"></i> Flujo de Pago</a></li>
+                <li><a href="#ejemplos"><i class="fas fa-lightbulb"></i> Ejemplos</a></li>
+                <li><a href="#excepciones"><i class="fas fa-exclamation-circle"></i> Excepciones</a></li>
+                <li><a href="#tecnicas"><i class="fas fa-cogs"></i> Sección de Desarrollo</a></li>
+            </ul>
+        </nav>
+        
+        <div class="content">
+            <!-- Sección de Servicios -->
+            <section id="servicios" class="section">
+                <h2 class="section-title"><i class="fas fa-list"></i> Servicios a Cobrar</h2>
+                
+                <div class="card">
+                    <h3>Cuotas de Lotes</h3>
+                    <p>Pagos mensuales por lotes adquiridos por los clientes.</p>
+                </div>
+                
+                <div class="card">
+                    <h3>Servicios Adicionales</h3>
+                    <ul>
+                        <li><strong>Jardinería:</strong> Servicio que se paga 1 o 2 veces al mes según la necesidad del lote.</li>
+                        <li><strong>Agua:</strong> Pago mensual que se aplica una vez solicitada la instalación del servicio (Si se atraza genera Interes y Gastos A.D.M.).</li>
+                        <li><strong>Impuesto:</strong> Pago anual correspondiente a impuestos municipales o estatales.</li>
+                        <li><strong>Expensas:</strong>
+                            <ul>
+                                <li>Obligatorias para barrios cerrados ("Los Puentes" y "Las Golondrinas")</li>
+                                <li>En "Las Golondrinas" aplica incluso sin contrato de compra de lote</li>
+                                <li>Para ambos, si se atraza genera Interes y Gastos A.D.M.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Cancelación Adelantada:</strong> Servicio especial generado al solicitar la liquidación anticipada de cuotas futuras.</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- Sección de Reglas de Pago -->
+            <section id="reglas" class="section">
+                <h2 class="section-title"><i class="fas fa-gavel"></i> Reglas de Pago</h2>
+                
+                <div class="card">
+                    <h3>Reglas para Cuotas Atrasadas</h3>
+                    <table class="rules-table">
+                        <thead>
+                            <tr>
+                                <th>Cuotas Atrasadas</th>
+                                <th>Pago Mínimo Requerido</th>
+                                <th>Acción del Sistema</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2</td>
+                                <td>1 cuota</td>
+                                <td>Permite pagar al menos una cuota</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>2 cuotas</td>
+                                <td>Obliga a pagar dos cuotas como mínimo</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>3 cuotas</td>
+                                <td>Requiere pago de tres cuotas obligatoriamente</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td>4 cuotas</td>
+                                <td>Requiere pago de cuatro cuotas obligatoriamente</td>
+                            </tr>
+                            <tr>
+                                <td>6 o más</td>
+                                <td>N/A</td>
+                                <td>Bloquea el pago por la web</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <strong>Las cuotas atrazadas generan Interes Mora y Gastos A.D.M.</strong>
+                </div>
+                
+                <div class="card">
+                    <h3>Reglas Generales</h3>
+                    <ul>
+                        <li><span class="rule-badge">Regla 1</span> Si existen <span class="highlight">servicios pendientes</span> hasta la fecha actual (jardinería, agua, impuesto, expensas), deben pagarse <span class="highlight">junto con la cuota</span>.</li>
+                        <li><span class="rule-badge">Regla 2</span> <span class="rule-badge important">Prohibición de Salteo</span>: Ningún ítem puede pagarse si existe uno anterior pendiente (orden cronológico estricto aplicada por plan).</li>
+                        <li><span class="rule-badge">Regla 3</span> Si el cliente no tiene cuotas pendientes, puede pagar servicios a elección, respetando las reglas anteriores.</li>
+                        <li><span class="rule-badge">Regla 4</span> La <span class="highlight">cancelación adelantada</span> se genera como un servicio independiente.</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- Sección de Flujo de Pago -->
+            <section id="flujo" class="section">
+                <h2 class="section-title"><i class="fas fa-project-diagram"></i> Flujo de Pago Web</h2>
+                
+                <div class="card">
+                    <h3>Proceso de Pago</h3>
+                    <ol>
+                        <li><strong>Verificación de Estado:</strong>
+                            <ul>
+                                <li>El sistema bloquea si hay 6 o más cuotas atrasadas</li>
+                                <li>Identifica cuotas pendientes ordenadas por fecha</li>
+                                <li>Identifica servicios vencidos (agua, jardinería, etc.)</li>
+                            </ul>
+                        </li>
+                        <li><strong>Cálculo de Pago Mínimo:</strong>
+                            <ul>
+                                <li>Aplica tabla de pago mínimo según cuotas atrasadas</li>
+                                <li>Agrega todos los servicios pendientes hasta la fecha</li>
+                            </ul>
+                        </li>
+                        <li><strong>Restricciones de Selección:</strong>
+                            <ul>
+                                <li>El cliente solo puede seleccionar:
+                                    <ul>
+                                        <li>Las cuotas/servicios obligatorios (mínimo requerido + servicios vencidos)</li>
+                                        <li>Ítems adicionales si no hay pendientes anteriores</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><strong>Calculo de Comisión:</strong>
+                            <ul>
+                                <li>Se realiza el calculo de comisión por el total de cuotas y/o servicios seleccionados.
+                                </li>
+                            </ul>
+                        </li>
+                        
+                        <strong>Resumen de Transacción:</strong>
+                            <ul>
+                                <li>Muestra cuotas a pagar en orden cronológico</li>
+                                <li>Detalla servicios incluidos (obligatorios y opcionales)</li>
+                                <li>Calcula comision y muestra el total a pagar</li>
+                            </ul>
+                        
+                    </ol>
+                </div>
+                
+                <div class="card">
+                    <h3>Validaciones Clave</h3>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> Orden cronológico estricto en todos los pagos</li>
+                        <li><i class="fas fa-check-circle"></i> Bloqueo automático para morosidad extrema (6+ cuotas)</li>
+                        <li><i class="fas fa-check-circle"></i> Inclusión obligatoria de servicios pendientes</li>
+                        <li><i class="fas fa-check-circle"></i> Cálculo automático del pago mínimo requerido</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- Sección de Ejemplos -->
+            <section id="ejemplos" class="section">
+                <h2 class="section-title"><i class="fas fa-lightbulb"></i> Ejemplos Prácticos</h2>
+                
+                <div class="example-card">
+                    <h4>Escenario 1: Morosidad moderada</h4>
+                    <p><strong>Situación:</strong> Cliente con 3 cuotas atrasadas (mayo, junio, julio) + agua de mayo pendiente.</p>
+                    <p><strong>Pago mínimo requerido:</strong> 2 cuotas (mayo y junio) + agua de mayo.</p>
+                    <p><strong>Opciones permitidas:</strong> El cliente puede agregar julio u otros servicios, solo si no hay pendientes previos.</p>
+                </div>
+                
+                <div class="example-card">
+                    <h4>Escenario 2: Morosidad alta</h4>
+                    <p><strong>Situación:</strong> Cliente con 5 cuotas atrasadas + jardinería de abril pendiente.</p>
+                    <p><strong>Pago mínimo requerido:</strong> 4 cuotas (las más antiguas) + jardinería de abril.</p>
+                    <p><strong>Restricción:</strong> Bloqueado pagar cuotas sueltas sin incluir la jardinería pendiente.</p>
+                </div>
+                
+                <div class="example-card">
+                    <h4>Escenario 3: Sin cuotas pendientes</h4>
+                    <p><strong>Situación:</strong> Cliente sin cuotas pendientes, pero con expensas de marzo pendientes.</p>
+                    <p><strong>Pago permitido:</strong> Expensas de marzo (y solo podría pagar abril si marzo está pagado).</p>
+                    <p><strong>Nota:</strong> El cliente podría pagar otros servicios si no tiene pendientes anteriores.</p>
+                </div>
+            </section>
+            
+            <!-- Sección de Excepciones -->
+            <section id="excepciones" class="section">
+                <h2 class="section-title"><i class="fas fa-exclamation-circle"></i> Excepciones y Casos Especiales</h2>
+                
+                <div class="card">
+                    <h3>Cancelación Adelantada</h3>
+                    <ul>
+                        <li>Se genera como un servicio independiente</li>
+                        <li>No requiere orden cronológico estricto</li>
+                        <li>Debe pagarse junto con todas las obligaciones vencidas</li>
+                        <li>Requiere autorización especial del departamento financiero</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h3>Barrio "Las Golondrinas"</h3>
+                    <ul>
+                        <li>Expensas son obligatorias incluso sin contrato de compra</li>
+                    </ul>
+                </div>
+            </section>
+            
+            
+            <!-- Sección de Desarrollo Técnico de la API -->
+            <section id="tecnicas" class="section">
+                <h2 class="section-title"><i class="fas fa-cogs"></i> Arquitectura y Funcionalidades de la API</h2>
+                <p class="section-description">
+                    La API RESTful está diseñada siguiendo un enfoque modular, agrupando los endpoints por funcionalidad para garantizar un sistema cohesivo y escalable. A continuación, se detallan los principales componentes y el flujo de operación.
+                </p>
+
+                <div class="card">
+                    <h3><i class="fas fa-cubes"></i> Grupos de Endpoints</h3>
+                    <p>Las funcionalidades de la API se organizan en los siguientes grupos lógicos:</p>
+                    <ul>
+                        <li><strong><i class="fas fa-sign-in-alt"></i> Autenticación (Acceso):</strong> Gestiona el acceso de los clientes mediante un flujo de autenticación seguro basado en JSON Web Tokens (JWT). Es el punto de entrada para poder consumir el resto de los servicios.</li>
+                        <li><strong><i class="fas fa-list-ul"></i> Consulta de Deudas:</strong> Permite a los usuarios autenticados obtener un listado cronológico y detallado de sus deudas pendientes.</li>
+                        <li><strong><i class="fas fa-shopping-cart"></i> Gestión del Carrito:</strong> Ofrece operaciones para que el cliente seleccione y agrupe las cuotas o servicios que desea pagar.</li>
+                        <li><strong><i class="fas fa-credit-card"></i> Procesamiento de Pagos:</strong> Endpoints dedicados a confirmar la transacción del contenido del carrito, procesando el pago de forma segura.</li>
+                        <li><strong><i class="fas fa-undo-alt"></i> Anulación de Transacciones:</strong> Proporciona la capacidad de revertir un pago que ha sido procesado previamente, sujeto a reglas de negocio.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-stream"></i> Flujo de Operación Típico</h3>
+                    <p>Un cliente normalmente interactuaría con la API siguiendo estos pasos:</p>
+                    <ol>
+                        <li><strong>Autenticarse:</strong> El cliente envía sus credenciales al endpoint de <code>Acceso</code> para obtener un token JWT.</li>
+                        <li><strong>Consultar Deudas:</strong> Usando el token JWT, el cliente consume el endpoint de <code>Consulta</code> para visualizar sus deudas.</li>
+                        <li><strong>Armar Carrito:</strong> El cliente selecciona una o más deudas y las añade al <code>Carrito</code>.</li>
+                        <li><strong>Realizar Pago:</strong> El cliente confirma los ítems del carrito a través del endpoint de <code>Pago</code>.</li>
+                        <li><strong>Anular (Opcional):</strong> Si es necesario, se puede invocar el endpoint de <code>Anulación</code> para revertir la transacción.</li>
+                    </ol>
+                </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-book-open"></i> Documentación Interactiva (Swagger UI)</h3>
+                    <p>
+                        La API autogenera su documentación interactiva utilizando la especificación OpenAPI, accesible a través de Swagger UI. Esta herramienta permite a los desarrolladores explorar, probar y entender cada endpoint directamente desde el navegador, viendo modelos de datos, parámetros requeridos y respuestas de ejemplo.
+                    </p>
+                    <strong>URLs de Acceso:</strong>
+                    <p><a href="http://192.168.13.202:8000/docs" target="_blank" class="api-link">http://192.168.13.202:8000/docs</a></p>
+                    <p><a href="http://192.168.13.202:8000/redoc#tag/" target="_blank" class="api-link">http://192.168.13.202:8000/redoc#tag</a></p>
+
+                    <hr style="margin: 25px 0;">
+
+                    <!-- ===== INICIO DE LA SECCIÓN AÑADIDA ===== -->
+                    <h3><i class="fab fa-github"></i> Código Fuente del Repositorio</h3>
+                    <p>El código fuente completo de la API está alojado en GitHub. Desde allí se puede revisar, descargar o clonar para desarrollo local.</p>
+                    
+                    <strong>URL del Repositorio:</strong>
+                    <p><a href="https://github.com/victor220888/ApiEspacioClientes" target="_blank" rel="noopener noreferrer" class="api-link">https://github.com/victor220888/ApiEspacioClientes</a></p>
+                    
+                    <strong>Comando para Clonar:</strong>
+                    <div class="code-block">
+                        <code>git clone https://github.com/victor220888/ApiEspacioClientes.git</code>
+                    </div>
+                    <!-- ===== FIN DE LA SECCIÓN AÑADIDA ===== -->
+                </div>
+            </section>
+        </div>
+         
+        <footer>
+            <p>Documento de Requerimientos - Sistema de Pagos | Inmobiliaria "Mi Tierra"</p>
+            <p>Área de Desarrollo | Versión 1.0 | Fecha: 28 de Junio de 2025</p>
+        </footer>
+    </div>
+</body>
+</html>
